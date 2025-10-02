@@ -1,24 +1,26 @@
 ########################################################
 #real-time occupancy grid construction
-#selectively scans a single row
+#selectively scans a single row 
 ########################################################
 
 import cv2
 import pyrealsense2 as rs
 import numpy as np
+import time
 
 pipeline = rs.pipeline()
 config = rs.config()
-config.enable_stream(rs.stream.depth, 424, 240, rs.format.z16, 30)
-config.enable_stream(rs.stream.color, 424, 240, rs.format.bgr8, 30)
+config.enable_stream(rs.stream.depth, 424, 240, rs.format.z16, 90)
+config.enable_stream(rs.stream.color, 424, 240, rs.format.bgr8, 90)
 profile = pipeline.start(config)
 align = rs.align(rs.stream.color)
 
 #grid param
 cell = 0.01
 left, right = -0.15, 0.15
-depthMax = 0.25
-
+depthMax = 0.15
+lastTime = time.perf_counter()
+frameCount = 0
 
 
 try:
@@ -76,7 +78,16 @@ try:
         scale = 20
         gridImg = cv2.resize(gridImg, (gridImg.shape[1]*scale, gridImg.shape[0]*scale), interpolation=cv2.INTER_NEAREST)
 
-        cv2.imshow("Occupancy Grid", gridImg)
+        cv2.imshow("Live Occupancy Grid", gridImg)
+
+        frameCount += 1
+        if frameCount % 60 == 0:
+            now = time.perf_counter()
+            elapsed = now - lastTime
+            fps = frameCount / elapsed
+            print(f"fps: {fps:.2f}")
+            frameCount = 0
+            lastTime = now
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
