@@ -29,7 +29,7 @@ FRAME_ONLY = True
 #depth stream res (424×240@30, 640×480@15–30, 320×240@30)
 DEPTH_WIDTH = 424
 DEPTH_HEIGHT = 240
-DEPTH_FPS = 90
+DEPTH_FPS = 30
 
 #cam mount
 CAM_HEIGHT_M = 0.1     #measure n change
