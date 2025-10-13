@@ -56,7 +56,8 @@ try:
 
         #convert to meter depths
         depthRowM = (depthRow.astype(np.float32) * depthScale)[0]
-
+        
+        #grid (0-free, 1-occupied)
         grid = np.zeros((depthCellNo, sideCellNo), dtype=np.uint8)
 
         for i in range(w):
