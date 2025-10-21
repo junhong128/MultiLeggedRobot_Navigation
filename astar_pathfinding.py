@@ -100,8 +100,8 @@ class PathPlanner:
             raise ValueError("Goal position out of bounds")
         if self.grid[start[0], start[1]] == 1:
             raise ValueError("Start position is occupied")
-        if self.grid[goal[0], goal[1]] == 1:
-            raise ValueError("Goal position is occupied")
+        # if self.grid[goal[0], goal[1]] == 1:
+        #     raise ValueError("Goal position is occupied")
         
         # Priority queue: (f_score, counter, position)
         counter = 0

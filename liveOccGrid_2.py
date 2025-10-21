@@ -16,9 +16,9 @@ profile = pipeline.start(config)
 align = rs.align(rs.stream.color)
 
 #grid param
-cell = 0.01
-left, right = -0.15, 0.15
-depthMax = 0.15
+cell = 0.04
+left, right = -0.35, 0.35
+depthMax = 0.75
 lastTime = time.perf_counter()
 frameCount = 0
 
