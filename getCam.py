@@ -1,3 +1,4 @@
+#https://docs.google.com/document/d/1e9i8UenG0LrFPWIwc598e_yiBIcuYSt5axyimfpwHvM/edit?usp=sharing
 import cv2
 import pyrealsense2 as rs
 import numpy as np
