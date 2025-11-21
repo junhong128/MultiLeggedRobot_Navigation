@@ -28,9 +28,20 @@ depthMax = 0.75
 scale = 20
 robotRadiusCell = 3
 
+#calibration params (y = ax + b)
+CALIB_A = 1.248933
+CALIB_B = -0.376062
+
 
 
 ##############################################   FUNCTIONS   ##############################################
+def calibrateDepth(rawDepth: float) -> float:
+    #only calibrate above 1m
+    if rawDepth <= 1.0:
+        return max(rawDepth, 0.0)
+    
+    calibrated = CALIB_A * rawDepth + CALIB_B
+    return max(calibrated, 0.0)
 def pickGoal(grid: np.ndarray) -> tuple[int, int] | None:
     rows, cols = grid.shape
     topRow = 0
@@ -101,6 +112,7 @@ try:
 
         for i in range(w):
             z = float(depthRowM[i])
+            z = calibrateDepth(z)
             if 0 < z < depthMax:
                 x = float((i - ppx) / fx * z)
                 colIndex = int((x - left) / cell)
