@@ -3,9 +3,6 @@
 #selectively scans a single row 
 #builds path using A*
 ########################################################
-
-
-
 import cv2
 import pyrealsense2 as rs
 import numpy as np
