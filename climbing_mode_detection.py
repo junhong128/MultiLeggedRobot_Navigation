@@ -4,7 +4,7 @@ import cv2
 
 # Configuration parameters
 MAX_DISTANCE = 1.5  # meters - objects within this distance will be analyzed
-HEIGHT_THRESHOLD = 0.3  # meters - if all objects are below this, activate climbing mode
+HEIGHT_THRESHOLD = 0.3  # meters - max height the robot can climb
 
 # Initialize RealSense pipeline
 pipeline = rs.pipeline()
@@ -63,9 +63,10 @@ try:
         # Determine max height of close objects
         max_height = np.max(close_heights) if close_heights.size > 0 else 0
 
-        # Activate climbing mode if all objects are below the height threshold
+        # Activate climbing mode if obstacles are climbable (at or below threshold)
+        # Turn OFF climbing mode if any obstacle exceeds the max climbable height
         # If no close objects detected, also activate climbing mode
-        climbing_mode = (close_heights.size == 0) or (max_height < HEIGHT_THRESHOLD)
+        climbing_mode = (close_heights.size == 0) or (max_height <= HEIGHT_THRESHOLD)
 
         # Visualization
         display_image = color_image.copy()
