@@ -4,7 +4,7 @@ import cv2
 
 # Configuration parameters
 MAX_DISTANCE = 1.5  # meters - objects within this distance will be analyzed
-MIN_HEIGHT = 0.3    # meters - if highest object is above this, activate climbing mode
+HEIGHT_THRESHOLD = 0.3  # meters - if all objects are below this, activate climbing mode
 
 # Initialize RealSense pipeline
 pipeline = rs.pipeline()
@@ -63,8 +63,9 @@ try:
         # Determine max height of close objects
         max_height = np.max(close_heights) if close_heights.size > 0 else 0
 
-        # Activate climbing mode if max height exceeds threshold
-        climbing_mode = max_height > MIN_HEIGHT
+        # Activate climbing mode if all objects are below the height threshold
+        # If no close objects detected, also activate climbing mode
+        climbing_mode = (close_heights.size == 0) or (max_height < HEIGHT_THRESHOLD)
 
         # Visualization
         display_image = color_image.copy()
@@ -87,7 +88,7 @@ try:
         cv2.putText(display_image, f"Distance Threshold: {MAX_DISTANCE:.1f} m", (10, 100),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
 
-        cv2.putText(display_image, f"Height Threshold: {MIN_HEIGHT:.1f} m", (10, 125),
+        cv2.putText(display_image, f"Height Threshold: {HEIGHT_THRESHOLD:.1f} m", (10, 125),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
 
         # Create depth colormap for visualization (optional second window)
