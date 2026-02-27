@@ -6,7 +6,7 @@
 import cv2
 import pyrealsense2 as rs
 import numpy as np
-from astar_pathfinding import PathPlanner
+from OccGrid.astar_pathfinding import PathPlanner
 
 pipeline = rs.pipeline()
 config = rs.config()
