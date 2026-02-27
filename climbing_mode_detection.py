@@ -85,9 +85,9 @@ def height_above_plane(x, y, z, plane):
     """
     a, b, c, d = plane
     # Signed distance from point to plane
-    # For ground plane with normal pointing up, positive distance = above ground
+    # Normal points up (negative Y in camera coords), so positive distance = above ground
     distances = (a * x + b * y + c * z + d) / np.sqrt(a*a + b*b + c*c)
-    return -distances  # Negate because camera Y is down
+    return distances
 
 
 # Initialize RealSense pipeline
@@ -173,9 +173,9 @@ try:
         # Use averaged plane for stability
         if ground_plane_history:
             avg_plane = np.mean(ground_plane_history, axis=0)
-            # Re-normalize the normal vector
+            # Re-normalize the normal vector (but NOT the d value)
             norm = np.sqrt(avg_plane[0]**2 + avg_plane[1]**2 + avg_plane[2]**2)
-            ground_plane = (avg_plane[0]/norm, avg_plane[1]/norm, avg_plane[2]/norm, avg_plane[3]/norm)
+            ground_plane = (avg_plane[0]/norm, avg_plane[1]/norm, avg_plane[2]/norm, avg_plane[3])
 
         # --- Height Calculation ---
         if ground_plane is not None:
