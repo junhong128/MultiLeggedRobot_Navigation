@@ -3,8 +3,8 @@ import numpy as np
 import cv2
 
 # Configuration parameters
-MAX_DISTANCE = 1.5  # meters - objects within this distance will be analyzed
-HEIGHT_THRESHOLD = 0.3  # meters - max height the robot can climb
+MAX_DISTANCE = 0.3  # meters - objects within this distance will be analyzed
+HEIGHT_THRESHOLD = 0.15  # meters - max height the robot can climb
 GROUND_RANSAC_ITERATIONS = 100  # RANSAC iterations for ground plane fitting
 GROUND_RANSAC_THRESHOLD = 0.02  # meters - inlier threshold for ground plane
 CAMERA_HEIGHT = 0.15  # meters - approximate camera height from ground (used as fallback)
