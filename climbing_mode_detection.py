@@ -168,37 +168,32 @@ try:
 
         #HEIGHT CALCULATION
         if ground_plane is not None:
-            # Calculate height above ground for all points
             heights = height_above_plane(x_3d, y_3d, z_3d, ground_plane)
         else:
-            # Fallback: assume camera is at CAMERA_HEIGHT, looking horizontally
-            # Height = camera_height - y_3d (since y is down in camera coords)
+            #fallback
             heights = CAMERA_HEIGHT - y_3d
 
-        # --- Obstacle Detection ---
-        # Mask for close objects (within MAX_DISTANCE)
+        #OBSTACLE DETECTION
+        #mask all objects
         close_objects_mask = valid_mask & (z_3d < MAX_DISTANCE)
 
-        # Filter out ground points (heights close to 0)
-        # Only consider points above 2cm as potential obstacles
+        #filter out ground points
+        #consider points above 2cm as obstacles
         obstacle_mask = close_objects_mask & (heights > 0.02)
-
-        # Get obstacle heights
         obstacle_heights = heights[obstacle_mask]
 
-        # Determine max obstacle height
         max_obstacle_height = np.max(obstacle_heights) if obstacle_heights.size > 0 else 0
 
-        # Climbing mode logic
+        #CLIMBING MODE DECISION
         climbing_mode = (obstacle_heights.size == 0) or (max_obstacle_height <= HEIGHT_THRESHOLD)
 
-        # --- Visualization ---
+        #DISPLAY
         display_image = color_image.copy()
 
-        # Create height colormap for visualization
+        #height colormap
         height_viz = np.zeros_like(color_image)
         if ground_plane is not None:
-            # Normalize heights for visualization (0 to HEIGHT_THRESHOLD*2)
+            #normalize heights
             height_normalized = np.clip(heights / (HEIGHT_THRESHOLD * 2), 0, 1)
             height_colored = cv2.applyColorMap(
                 (height_normalized * 255).astype(np.uint8),
@@ -206,15 +201,14 @@ try:
             )
             height_viz[valid_mask] = height_colored[valid_mask]
 
-        # Highlight obstacles above threshold in red
+        #red -> unclimbable obstacle
         too_high_mask = obstacle_mask & (heights > HEIGHT_THRESHOLD)
         display_image[too_high_mask] = [0, 0, 255]  # Red for too high
 
-        # Highlight climbable obstacles in green
+        #green -> climbable obstacle
         climbable_mask = obstacle_mask & (heights <= HEIGHT_THRESHOLD) & (heights > 0.02)
         display_image[climbable_mask] = [0, 255, 0]  # Green for climbable
 
-        # Draw status information
         status_color = (0, 255, 0) if climbing_mode else (0, 0, 255)
         mode_text = "CLIMBING MODE: ON" if climbing_mode else "CLIMBING MODE: OFF"
 
@@ -232,11 +226,9 @@ try:
         cv2.putText(display_image, plane_status, (10, 125),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, plane_color, 1, cv2.LINE_AA)
 
-        # Show views
         cv2.imshow("Climbing Mode Detection", display_image)
         cv2.imshow("Height Map", height_viz)
 
-        # Exit on 'q' or ESC
         key = cv2.waitKey(1) & 0xFF
         if key in (ord('q'), 27):
             break
