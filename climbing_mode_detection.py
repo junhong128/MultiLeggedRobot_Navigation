@@ -2,30 +2,28 @@ import pyrealsense2 as rs
 import numpy as np
 import cv2
 
-# Configuration parameters
-MAX_DISTANCE = 0.3  # meters - objects within this distance will be analyzed
-HEIGHT_THRESHOLD = 0.15  # meters - max height the robot can climb
-GROUND_RANSAC_ITERATIONS = 100  # RANSAC iterations for ground plane fitting
-GROUND_RANSAC_THRESHOLD = 0.02  # meters - inlier threshold for ground plane
-CAMERA_HEIGHT = 0.15  # meters - approximate camera height from ground (used as fallback)
+#CONFIG
+MAX_DISTANCE = 0.3  #only detect objects within this distance (m)
+HEIGHT_THRESHOLD = 0.15  #max height robot can climb (m)
+GROUND_RANSAC_ITERATIONS = 100  #ground plane RANSAC iterations
+GROUND_RANSAC_THRESHOLD = 0.02  #RANSAC inlier threshold (m)
+CAMERA_HEIGHT = 0.15  #height of cam (m)
 
 
 def depth_to_pointcloud(depth_meters, fx, fy, ppx, ppy):
     """Convert depth image to 3D point cloud in camera coordinates.
-
-    Camera coordinate system:
     - X: right
     - Y: down
     - Z: forward (depth)
     """
     h, w = depth_meters.shape
 
-    # Create pixel coordinate grids
+    #pixel coords grid
     u = np.arange(w)
     v = np.arange(h)
     u, v = np.meshgrid(u, v)
 
-    # Convert to 3D coordinates
+    #3D coords
     z = depth_meters
     x = (u - ppx) * z / fx
     y = (v - ppy) * z / fy
@@ -36,7 +34,7 @@ def depth_to_pointcloud(depth_meters, fx, fy, ppx, ppy):
 def fit_ground_plane_ransac(points_3d, n_iterations=100, threshold=0.02):
     """Fit ground plane using RANSAC.
 
-    Returns plane coefficients (a, b, c, d) where ax + by + cz + d = 0
+    Return plane coefficients (a, b, c, d) where ax + by + cz + d = 0
     The plane normal (a, b, c) points upward (negative y in camera coords).
     """
     if len(points_3d) < 3:
@@ -46,11 +44,11 @@ def fit_ground_plane_ransac(points_3d, n_iterations=100, threshold=0.02):
     best_inliers = 0
 
     for _ in range(n_iterations):
-        # Randomly sample 3 points
+        #sample 3 random points
         idx = np.random.choice(len(points_3d), 3, replace=False)
         p1, p2, p3 = points_3d[idx]
 
-        # Compute plane normal via cross product
+        #plane normal
         v1 = p2 - p1
         v2 = p3 - p1
         normal = np.cross(v1, v2)
@@ -60,14 +58,14 @@ def fit_ground_plane_ransac(points_3d, n_iterations=100, threshold=0.02):
             continue
         normal = normal / norm_length
 
-        # Ensure normal points "up" (negative y direction in camera coords)
+        #normal points up
         if normal[1] > 0:
             normal = -normal
 
-        # Plane equation: ax + by + cz + d = 0
+        #ax + by + cz + d = 0
         d = -np.dot(normal, p1)
 
-        # Count inliers
+        #count inliers
         distances = np.abs(np.dot(points_3d, normal) + d)
         inliers = np.sum(distances < threshold)
 
@@ -84,38 +82,34 @@ def height_above_plane(x, y, z, plane):
     Positive = above plane, Negative = below plane.
     """
     a, b, c, d = plane
-    # Signed distance from point to plane
-    # Normal points up (negative Y in camera coords), so positive distance = above ground
+    #normal points up (positive distance = above ground)
     distances = (a * x + b * y + c * z + d) / np.sqrt(a*a + b*b + c*c)
     return distances
 
 
-# Initialize RealSense pipeline
+#realsense setup
 pipeline = rs.pipeline()
 config = rs.config()
 config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
 config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 profile = pipeline.start(config)
-
-# Align depth frames to color frames
 align = rs.align(rs.stream.color)
 
-# Get camera intrinsics
+#cam instrinsics
 color_stream = profile.get_stream(rs.stream.color).as_video_stream_profile()
 intr = color_stream.get_intrinsics()
 ppx, ppy, fx, fy = intr.ppx, intr.ppy, intr.fx, intr.fy
 
-# Get depth scale (converts depth units to meters)
+#depth scale
 depth_sensor = profile.get_device().first_depth_sensor()
 depth_scale = depth_sensor.get_depth_scale()
 
-# Store recent ground planes for temporal smoothing
+#ground plane storage
 ground_plane_history = []
 PLANE_HISTORY_SIZE = 5
 
 try:
     while True:
-        # Get aligned frames
         frames = align.process(pipeline.wait_for_frames())
         depth_frame = frames.get_depth_frame()
         color_frame = frames.get_color_frame()
@@ -123,39 +117,35 @@ try:
         if not depth_frame or not color_frame:
             continue
 
-        # Convert to numpy arrays
         color_image = np.asanyarray(color_frame.get_data())
         depth_image = np.asanyarray(depth_frame.get_data())
 
-        # Convert depth to meters
         depth_meters = depth_image.astype(np.float32) * depth_scale
         h, w = depth_meters.shape
 
-        # Convert to 3D point cloud
         x_3d, y_3d, z_3d = depth_to_pointcloud(depth_meters, fx, fy, ppx, ppy)
 
-        # Create mask for valid depth readings
+        #mask of valid depth points
         valid_mask = depth_meters > 0
 
-        # --- Ground Plane Estimation ---
-        # Use bottom portion of image (more likely to be ground)
+        #ground plane estimation
         ground_region_mask = np.zeros_like(valid_mask)
         ground_region_mask[int(h * 0.6):, :] = True  # Bottom 40% of image
         ground_sample_mask = valid_mask & ground_region_mask
 
-        # Extract points for ground plane fitting
+        #extract points
         ground_points = np.column_stack([
             x_3d[ground_sample_mask],
             y_3d[ground_sample_mask],
             z_3d[ground_sample_mask]
         ])
 
-        # Subsample for speed if too many points
+        #subsample for RANSAC
         if len(ground_points) > 5000:
             idx = np.random.choice(len(ground_points), 5000, replace=False)
             ground_points = ground_points[idx]
 
-        # Fit ground plane
+        #fit ground plane
         ground_plane = None
         if len(ground_points) >= 100:
             ground_plane = fit_ground_plane_ransac(
@@ -164,20 +154,19 @@ try:
                 threshold=GROUND_RANSAC_THRESHOLD
             )
 
-        # Temporal smoothing of ground plane
+        #temporal smoothing
         if ground_plane is not None:
             ground_plane_history.append(ground_plane)
             if len(ground_plane_history) > PLANE_HISTORY_SIZE:
                 ground_plane_history.pop(0)
 
-        # Use averaged plane for stability
+        #averaged plane
         if ground_plane_history:
             avg_plane = np.mean(ground_plane_history, axis=0)
-            # Re-normalize the normal vector (but NOT the d value)
             norm = np.sqrt(avg_plane[0]**2 + avg_plane[1]**2 + avg_plane[2]**2)
             ground_plane = (avg_plane[0]/norm, avg_plane[1]/norm, avg_plane[2]/norm, avg_plane[3])
 
-        # --- Height Calculation ---
+        #HEIGHT CALCULATION
         if ground_plane is not None:
             # Calculate height above ground for all points
             heights = height_above_plane(x_3d, y_3d, z_3d, ground_plane)
